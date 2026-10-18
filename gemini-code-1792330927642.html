@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>霧谷春町の1週間 - ブルーライトと進路調査票</title>
+<style>
+  body {
+    background-color: #0d0f14;
+    color: #c9d1d9;
+    font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+  }
+  #game-container {
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 640px;
+    padding: 24px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+    box-sizing: border-box;
+  }
+  h1 {
+    font-size: 1.25rem;
+    color: #8b949e;
+    margin-top: 0;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #21262d;
+    padding-bottom: 10px;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+  #header-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    font-size: 1.05rem;
+    font-weight: bold;
+    color: #58a6ff;
+  }
+  .stat-row {
+    margin-bottom: 12px;
+  }
+  .stat-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+  }
+  .bar-bg {
+    background-color: #21262d;
+    height: 14px;
+    border-radius: 7px;
+    overflow: hidden;
+  }
+  #mental-bar {
+    background-color: #3fb950;
+    height: 100%;
+    width: 60%;
+    transition: width 0.3s ease, background-color 0.3s ease;
+  }
+  #pride-bar {
+    background-color: #a371f7;
+    height: 100%;
+    width: 50%;
+    transition: width 0.3s ease;
+  }
+  #log-box {
+    background-color: #090c10;
+    border: 1px solid #21262d;
+    border-radius: 6px;
+    padding: 16px;
+    height: 250px;
+    overflow-y: auto;
+    margin-top: 16px;
+    margin-bottom: 20px;
+    line-height: 1.7;
+    font-size: 0.95rem;
+  }
+  .log-entry {
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #21262d;
+  }
+  .log-system {
+    color: #8b949e;
+    font-size: 0.85rem;
+  }
+  .log-damage {
+    color: #ff7b72;
+  }
+  .log-heal {
+    color: #7ee787;
+  }
+  .log-event {
+    color: #d2a8ff;
+    background-color: rgba(163, 113, 247, 0.1);
+    padding: 10px;
+    border-left: 3px solid #a371f7;
+    border-radius: 4px;
+  }
+  #commands {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  button.cmd-btn {
+    background-color: #21262d;
+    color: #c9d1d9;
+    border: 1px solid #363b42;
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+  }
+  button.cmd-btn:hover:not(:disabled) {
+    background-color: #30363d;
+    border-color: #8b949e;
+  }
+  button.cmd-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .cmd-desc {
+    display: block;
+    font-size: 0.78rem;
+    color: #8b949e;
+    margin-top: 4px;
+  }
+  #restart-btn {
+    background-color: #238636;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 14px;
+    font-size: 1rem;
+    cursor: pointer;
+    width: 100%;
+    display: none;
+    text-align: center;
+    font-weight: bold;
+  }
+  #restart-btn:hover {
+    background-color: #2ea043;
+  }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+  <h1>霧谷春町の1週間</h1>
+  
+  <div id="header-info">
+    <span id="day-display">1日目：昼</span>
+    <span id="turn-display">残り14ターン</span>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-label">
+      <span>メンタル（0で引きこもり・中卒確定）</span>
+      <span id="mental-val">60 / 100</span>
+    </div>
+    <div class="bar-bg">
+      <div id="mental-bar"></div>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-label">
+      <span>プライド（低いと健康的行動が選択不可）</span>
+      <span id="pride-val">50 / 100</span>
+    </div>
+    <div class="bar-bg">
+      <div id="pride-bar"></div>
+    </div>
+  </div>
+
+  <div id="log-box"></div>
+
+  <div id="commands">
+    <button class="cmd-btn" id="btn-science" onclick="takeAction('science')">
+      科学的なストレス解消法（散歩・筋トレ）
+      <span class="cmd-desc">【要プライド20】確実にメンタル+20 / 冷笑している行動をとるためプライド-20</span>
+    </button>
+    <button class="cmd-btn" id="btn-pol" onclick="takeAction('politics')">
+      Xの本垢で政治・社会批判ポスト
+      <span class="cmd-desc">優越感でプライド+25 / 40%の確率で反論・プチ炎上してメンタル-12</span>
+    </button>
+    <button class="cmd-btn" id="btn-ura" onclick="takeAction('ura')">
+      Xの裏垢で「現役JK」として病みポスト
+      <span class="cmd-desc">メンタル+10、プライド-5 / たまにフォロワーに構ってもらえて大回復</span>
+    </button>
+    <button class="cmd-btn" id="btn-cafe" onclick="takeAction('cafe')">
+      Discord「春カフェ」でふにゃおす通話
+      <span class="cmd-desc">【要プライド10】70%でメンタル+16、プライド-10 / 30%で過疎っておりメンタル-10</span>
+    </button>
+    <button class="cmd-btn" id="btn-m" onclick="takeAction('m_call')">
+      Mに連絡して寝落ち通話をねだる
+      <span class="cmd-desc">【大博打】成功でメンタル+45、プライド+10 / 失敗でメンタル-25、プライド-15（連続使用で確率激減）</span>
+    </button>
+  </div>
+
+  <button id="restart-btn" onclick="initGame()">もう一度1週間をやり直す</button>
+</div>
+
+<script>
+  let day = 1;
+  let isNight = false;
+  let mental = 60;
+  let pride = 50;
+  let usedMLastTurn = false;
+  let mRescueUsed = false;
+  let isGameOver = false;
+
+  function getRandom100() {
+    let str = Math.random().toString().slice(2, 4);
+    if (str.length === 0) return 0;
+    if (str.length === 1) str = str + "0";
+    return parseInt(str, 10);
+  }
+
+  function clamp(val, min, max) {
+    if (val < min) return min;
+    if (val > max) return max;
+    return val;
+  }
+
+  function addLog(text, type) {
+    const box = document.getElementById("log-box");
+    const entry = document.createElement("div");
+    entry.className = "log-entry";
+    if (type === "system") entry.className += " log-system";
+    if (type === "damage") entry.className += " log-damage";
+    if (type === "heal") entry.className += " log-heal";
+    if (type === "event") entry.className += " log-event";
+    entry.innerHTML = text;
+    box.appendChild(entry);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function updateUI() {
+    const timeStr = isNight ? "夜" : "昼";
+    const remaining = (7 - day) + (7 - day) + (isNight ? 1 : 2);
+    document.getElementById("day-display").textContent = day + "日目：" + timeStr;
+    document.getElementById("turn-display").textContent = "残り" + remaining + "ターン";
+
+    document.getElementById("mental-val").textContent = mental + " / 100";
+    document.getElementById("pride-val").textContent = pride + " / 100";
+
+    const mBar = document.getElementById("mental-bar");
+    mBar.style.width = mental + "%";
+    if (mental <= 25) {
+      mBar.style.backgroundColor = "#f85149";
+    } else if (mental <= 50) {
+      mBar.style.backgroundColor = "#d29922";
+    } else {
+      mBar.style.backgroundColor = "#3fb950";
+    }
+
+    const pBar = document.getElementById("pride-bar");
+    pBar.style.width = pride + "%";
+
+    document.getElementById("btn-science").disabled = (pride < 20 || isGameOver);
+    document.getElementById("btn-cafe").disabled = (pride < 10 || isGameOver);
+    document.getElementById("btn-pol").disabled = isGameOver;
+    document.getElementById("btn-ura").disabled = isGameOver;
+    document.getElementById("btn-m").disabled = isGameOver;
+  }
+
+  function initGame() {
+    day = 1;
+    isNight = false;
+    mental = 60;
+    pride = 50;
+    usedMLastTurn = false;
+    mRescueUsed = false;
+    isGameOver = false;
+
+    document.getElementById("log-box").innerHTML = "";
+    document.getElementById("commands").style.display = "flex";
+    document.getElementById("restart-btn").style.display = "none";
+
+    addLog("昼夜逆転した薄暗い部屋。スマホのブルーライトだけが顔を照らしている。<br>Xの本垢では排外主義や全体主義への冷笑的な批判を流し、裏垢では「現役JK（JKとは言ってない）」を名乗って虚無を吐き出す。Discordの「春カフェ」でふにゃおすとして振る舞いながらも、本当に欲しいのは「M」からの通知だけ。<br>机の隅に放置された白紙の進路希望調査票が視界に入り、じわじわと息が詰まる。なんとかこの1週間を生き延びなければ。", "event");
+    updateUI();
+  }
+
+  function takeAction(action) {
+    if (isGameOver) return;
+    let r = getRandom100();
+
+    if (action === "science") {
+      mental = clamp(mental + 20, 0, 100);
+      pride = clamp(pride - 20, 0, 100);
+      usedMLastTurn = false;
+      addLog("「日光浴びてセロトニン出すとか、思考停止した資本主義の奴隷がやることだろ……」<br>ぶつぶつと冷笑的な言い訳を呟きながら外を歩き、軽く筋トレをした。悔しいことに少し頭がスッキリしてしまい、そんな単純な自分の肉体にプライドが深く傷ついた。（メンタル+20 / プライド-20）", "heal");
+    } 
+    else if (action === "politics") {
+      pride = clamp(pride + 25, 0, 100);
+      usedMLastTurn = false;
+      if (r < 40) {
+        mental = clamp(mental - 12, 0, 100);
+        addLog("Xの本垢で社会の構造的欠陥や排外主義について鋭く批判してやった。しかし見知らぬアカウントから粘着質な引用リポストが飛び交い、通知欄が荒れて神経がすり減った……。（メンタル-12 / プライド+25）", "damage");
+      } else {
+        mental = clamp(mental + 2, 0, 100);
+        addLog("Xの本垢で政治的な冷笑ポストを投下した。タイムラインの愚衆どもを啓蒙してやったという優越感で、自尊心が大きく満たされた。（メンタル+2 / プライド+25）", "heal");
+      }
+    }
+    else if (action === "ura") {
+      usedMLastTurn = false;
+      if (r < 25) {
+        mental = clamp(mental + 18, 0, 100);
+        pride = clamp(pride + 5, 0, 100);
+        addLog("裏垢で「もう全部どうでもいい、消えたい」と呟いたら、フォロワーから心配のリプライがたくさん届いた。まだネットには自分の居場所がある気がした。（メンタル+18 / プライド+5）", "heal");
+      } else {
+        mental = clamp(mental + 10, 0, 100);
+        pride = clamp(pride - 5, 0, 100);
+        addLog("「現役JK（JKとは言ってない）」のアカウントで病みポストを連投して感情を吐き出した。いいねはほとんど付かず、自己嫌悪で少しプライドが削れた。（メンタル+10 / プライド-5）", "system");
+      }
+    }
+    else if (action === "cafe") {
+      pride = clamp(pride - 10, 0, 100);
+      usedMLastTurn = false;
+      if (r < 70) {
+        mental = clamp(mental + 16, 0, 100);
+        addLog("Discordサーバー「春カフェ」の通話に入り、ふにゃおすムーブでメンバーに甘えた。優しい言葉でよしよしされて心は落ち着いたが、道化を演じている自覚でプライドは削れた。（メンタル+16 / プライド-10）", "heal");
+      } else {
+        mental = clamp(mental - 10, 0, 100);
+        pride = clamp(pride - 5, 0, 100);
+        addLog("「春カフェ」のボイスチャットに入ったが、誰も来ない。自分が作ったサーバーなのに過疎っている現実を突きつけられ、虚しさが押し寄せた……。（メンタル-10 / プライド-15）", "damage");
+      }
+    }
+    else if (action === "m_call") {
+      let threshold = 35;
+      if (mental <= 25) threshold = 50;
+      if (usedMLastTurn) threshold = 15;
+
+      usedMLastTurn = true;
+
+      if (r < threshold) {
+        mental = clamp(mental + 45, 0, 100);
+        pride = clamp(pride + 10, 0, 100);
+        addLog("「M、いま何してるの……？ ちょっとだけ声聞きたいな」<br>震える指で連絡すると、Mが優しく通話に付き合ってくれた。向こうに恋愛感情がないことは分かっているのに、その優しさに脳が溶けるほど救われ、そのまま幸福な寝落ち通話に成功した。（メンタル+45 / プライド+10）", "heal");
+      } else {
+        mental = clamp(mental - 25, 0, 100);
+        pride = clamp(pride - 15, 0, 100);
+        addLog("「M、通話できる……？」と送ったが、数時間経っても既読すらつかない。やっと来た返信は「ごめん、今忙しいからまた今度ね」という素っ気ない一文だけ。拒絶された感覚で視界が歪み、呼吸が浅くなる。（メンタル-25 / プライド-15）", "damage");
+      }
+    }
+
+    endTurnProcess();
+  }
+
+  function endTurnProcess() {
+    if (mental <= 0) {
+      triggerEnding(false);
+      return;
+    }
+
+    let drain = isNight ? 8 : 6;
+    mental = clamp(mental - drain, 0, 100);
+    addLog("【時間経過】部屋の閉塞感と将来への焦りで神経が削られる。（メンタル-" + drain + "）", "system");
+
+    if (day === 3 && isNight) {
+      mental = clamp(mental - 20, 0, 100);
+      addLog("【強制イベント：親からの追及】<br>ドア越しに親から「進路希望調査票、いつになったら出すの」と冷たい声で問い詰められた。逃げ場のない現実を突きつけられ、動悸が止まらない。（メンタル-20）", "event");
+    }
+    if (day === 5 && isNight) {
+      mental = clamp(mental - 25, 0, 100);
+      pride = clamp(pride - 15, 0, 100);
+      addLog("【強制イベント：ネットの悪意と孤立】<br>Xで過去の痛いポストを晒されて嘲笑され、さらに「春カフェ」の一部メンバーが裏で自分のメンヘラ気質を笑っているという噂が耳に入った。居場所が崩れていく。（メンタル-25 / プライド-15）", "event");
+    }
+    if (day === 6 && isNight) {
+      mental = clamp(mental - 30, 0, 100);
+      addLog("【強制イベント：Mの不在】<br>自分のDMには返信がないのに、Mが他の誰かと夜遅くまで楽しそうにゲーム通話しているのを知ってしまった。激しい嫉妬と絶望で頭が割れそうだ。（メンタル-30）", "event");
+    }
+
+    if (mental > 0 && mental <= 20 && !mRescueUsed) {
+      let rescueRoll = getRandom100();
+      if (rescueRoll < 35) {
+        mRescueUsed = true;
+        mental = clamp(mental + 25, 0, 100);
+        addLog("【突発イベント：Mからの気まぐれなDM】<br>限界寸前でスマホを握りしめていた時、Mから「最近大丈夫？ 無理すんなよ」と短いメッセージが届いた。他意のないただの優しさだと分かっていても、その一言だけで涙が出るほど救われてしまった。（メンタル+25）", "heal");
+      }
+    }
+
+    if (mental <= 0) {
+      triggerEnding(false);
+      return;
+    }
+
+    if (day === 7 && isNight) {
+      triggerEnding(true);
+      return;
+    }
+
+    if (isNight) {
+      day = day + 1;
+      isNight = false;
+    } else {
+      isNight = true;
+    }
+
+    updateUI();
+  }
+
+  function triggerEnding(isHappy) {
+    isGameOver = true;
+    updateUI();
+    document.getElementById("commands").style.display = "none";
+    document.getElementById("restart-btn").style.display = "block";
+
+    if (isHappy) {
+      addLog("【ハッピーエンド：とりあえずの日常へ】<br>7日間の綱渡りのような日々を、なんとか心を壊さずに生き延びた。<br>Mが自分のものになるわけでもなく、生きづらさが消えたわけでもない。それでも春町は重い腰を上げ、通信制高校のパンフレットを開いて机に向かった。Xの裏垢のプロフィールから「現役JK」の文字をそっと消し、冷笑を少しだけ脇に置いて、ペンを握る。脆くて不安定だけれど、彼なりの新しい日常がここから始まっていく。", "heal");
+    } else {
+      addLog("【バッドエンド：引きこもり・中卒ルート】<br>プツン、と頭の中で何かが切れた。<br>衝動的に「春カフェ」のサーバーを解体し、Xのアカウントもすべて消去した。Mからの連絡を待つ気力すらもう残っていない。白紙の進路希望調査票をゴミ箱に捨て、部屋の遮光カーテンを完全に閉め切った。<br>それから彼は一度も部屋から出ることなく、進学も諦めて中卒の引きこもりとなった。暗い部屋には、もうブルーライトすら灯らない。", "damage");
+    }
+  }
+
+  initGame();
+</script>
+</body>
+</html>
